@@ -37,6 +37,7 @@
     "pdf2json": "./bin/pdf2json"
   },
   "dependencies": {
+    "image-size": "^0.6.2",
     "xmldom": "^0.1.22",
     "lodash": "^4.15.0",
     "optimist": "^0.6.1",

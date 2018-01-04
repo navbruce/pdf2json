@@ -77,20 +77,35 @@ Or, call directly with buffer:
     pdfParser.loadPDF("./pdf2json/test/pdf/fd/form/F1040EZ.pdf");
 ````
 
+* Parse a PDF and save embedded images to separate files:
+
+````javascript
+    let PDFParser = require("pdf2json");
+
+    let pdfParser = new PDFParser(null, false, '/tmp');
+
+    pdfParser.on("pdfParser_dataError", errData => console.error(errData.parserError) );
+    pdfParser.on("pdfParser_dataReady", pdfData => {
+        fs.writeFile("./pdf2json/test/F1040EZ.json", JSON.stringify(pdfData));
+    });
+
+    pdfParser.loadPDF("./pdf2json/test/pdf/fd/form/F1040EZ.pdf");
+````
+
 Alternatively, you can pipe input and output streams: (requires v1.1.4)
 
 ````javascript
     let fs = require('fs'),
         PDFParser = require("pdf2json");
-    
+
     let inputStream = fs.createReadStream("./pdf2json/test/pdf/fd/form/F1040EZ.pdf", {bufferSize: 64 * 1024});
     let outputStream = fs.createWriteStream("./pdf2json/test/target/fd/form/F1040EZ.json");
-    
+
     inputStream.pipe(new PDFParser()).pipe(new StringifyStream()).pipe(outputStream);
 ````
 See [p2jcmd.js](https://github.com/modesty/pdf2json/blob/master/lib/p2jcmd.js) for more details.
 
- 
+
 ## API Reference
 
 * events:
@@ -110,11 +125,11 @@ If success, event "pdfParser_dataReady" will be raised with output data object: 
 ````
 returns text in string.
 
-* Get all input fields information from "pdfParser_dataReady" event handler: 
+* Get all input fields information from "pdfParser_dataReady" event handler:
 ````javascript
         function getAllFieldsTypes();
-````        
-returns an array of field objects.         
+````
+returns an array of field objects.
 
 ## Output format Reference
 
@@ -609,7 +624,7 @@ In order to run pdf.js in Node.js, we have to address those dependencies and als
     * Fonts: no need to call ensureFonts to make sure fonts downloaded, only need to parse out font info in CSS font format to be used in json's texts array.
     * DOM: all DOM manipulation code in pdf.js are commented out, including creating canvas and div for screen rendering and font downloading purpose.
     * Interactive Forms elements: (in process to support them)
-    * Leave out the support to embedded images
+    * Images: output hash of image content, optionally save images to separate files
 
 After the changes and extensions listed above, this pdf2json node.js module will work either in a server environment ( I have a RESTful web service built with resitify and pdf2json, it's been running on an Amazon EC2 instance) or as a standalone command line tool (something similar to the Vows unit tests).
 
@@ -620,7 +635,7 @@ More porting notes can be found at [Porting and Extending PDFJS to NodeJS](http:
 This pdf2json module's output does not 100% maps from PDF definitions, some of them is because of time limitation I currently have, some others result from the 'dictionary' concept for the output. Given these known issues or unsupported features in current implementation, it allows me to contribute back to the open source community with the most important features implemented while leaving some improvement space for the future. All un-supported features listed below can be resolved technically some way or other, if your use case really requires them:
 
 * Embedded content:
-    * All embedded content are igored, current implementation focuses on static contents and interactive forms. Un-supported PDF embedded contents includes 'Images', 'Fonts' and other dynamic contents;
+    * Most embedded content are ignored, current implementation focuses on static contents and interactive forms. Un-supported PDF embedded contents includes 'Fonts' and other dynamic contents;
 * Text and Form Styles:
     * text and form elements styles has partial support. This means when you have client side renderer (say in HTML5 canvas or SVG renderer), the PDF content may not look exactly the same as how Acrobat renders. The reason is that we've used "style dictionary" in order to reduce the payload size over the wire, while "style dictionary" doesn't have all styles defined. This sort of partial support can be resolved by extending those 'style dictionaries'. Primary text style issues include:
         * Font face: only limit to the font families defined in style dictionary
@@ -699,11 +714,13 @@ Example of fields.json content:
 The fields.json output can be used to validate fields IDs with other data source, and/or to extract data value from user submitted PDFs.
 
 v0.6.8 added "-c" or "--content" command line argument to extract raw text content from PDF. It'll be a separated output file named as (pdf_file_name).content.txt.
-If all you need is the textual content of the PDF, "-c" essentially converts PDF to text, of cause, all formatting and styling will be lost.  
+If all you need is the textual content of the PDF, "-c" essentially converts PDF to text, of cause, all formatting and styling will be lost.
+
+v1.1.9 added "-e" or "--extractImages" command line argument to extract images to separate files in the output directory.
 
 ## Run Unit Test (commandline)
 
-It takes less than 1 minutes for pdf2json to parse 261 PDFs under `test/pdf` directory. Usually, it takes about 40 seconds or so to parses all of them. Besides the parimary JSON for each PDF, it also generates text content JSON and form fields JSON file (by `-c` and `-t` parameters) for further testing. 
+It takes less than 1 minutes for pdf2json to parse 261 PDFs under `test/pdf` directory. Usually, it takes about 40 seconds or so to parses all of them. Besides the parimary JSON for each PDF, it also generates text content JSON and form fields JSON file (by `-c` and `-t` parameters) for further testing.
 
 The 265 PDFs are all fill-able tax forms from government agencies for tax year 2013, including 165 federal forms, 23 efile instructions and 9 other state tax forms.
 
@@ -746,18 +763,18 @@ Some testing PDFs are provided by bug reporters, like the "unsupported encryptio
 ````
 	npm run-script test-misc
 ````
-  
+
 
 ## Upgrade to ~v1.x.x
 
-If you have an early version of pdf2json, please remove your local `node_modules` directory and re-run `npm install` to upgrade to pdf2json@1.0.x. 
+If you have an early version of pdf2json, please remove your local `node_modules` directory and re-run `npm install` to upgrade to pdf2json@1.0.x.
 
 v1.x.x upgraded dependency packages, removed some unnecessary dependencies, started to assumes ES6 / ES2015 with node ~v4.x. More PDFs are added for unit testing.
 
 **Note:**
 pdf2json has been in production for over 3 years, it's pretty reliable and solid when parsing hundreds (sometimes tens of thousands) of PDF forms every day, thanks to everybody's help.
 
-Starting v1.0.3, I'm trying to address a long over due annoying problem on [broken text blocks](https://github.com/modesty/pdf2json/issues/18). It's the biggest problem that hinders the efficiency of PDF content creation in our projects. Although the root cause lies in the original PDF streams, since the client doesn't render JSON character by character, it's a problem often appears in final rendered web content. We had to work around it by manually merge those text blocks. With the solution in v1.0.x, the need for manual text block merging is greately reduced.  
+Starting v1.0.3, I'm trying to address a long over due annoying problem on [broken text blocks](https://github.com/modesty/pdf2json/issues/18). It's the biggest problem that hinders the efficiency of PDF content creation in our projects. Although the root cause lies in the original PDF streams, since the client doesn't render JSON character by character, it's a problem often appears in final rendered web content. We had to work around it by manually merge those text blocks. With the solution in v1.0.x, the need for manual text block merging is greately reduced.
 
 The solution is to put to a post-parsing process stage to identify and auto-merge those adjacent blocks. It's not ideal, but works in most of my tests with those 261 PDFs underneath test directory.
 
@@ -789,7 +806,7 @@ $ sudo rm -f /usr/sbin/node
 $ sudo ln -s /usr/bin/nodejs /usr/sbin/node
 ```
 
-* Verify the version of node and installation 
+* Verify the version of node and installation
 
 ```
 $ which node
@@ -808,7 +825,7 @@ npm http 304 https://registry.npmjs.org/pdf2json
 /usr/bin/pdf2json -> /usr/lib/node_modules/pdf2json/bin/pdf2json
 pdf2json@0.6.1 /usr/lib/node_modules/pdf2json
 
-$ which pdf2json 
+$ which pdf2json
 /usr/bin/pdf2json
 
 $ pdf2json --version

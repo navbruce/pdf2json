@@ -13,7 +13,8 @@
                 "-f",
                 "tmp/test.pdf",
                 "-o",
-                "tmp"
+                "tmp",
+                "-e"
             ]
         }
     ]

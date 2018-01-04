@@ -85,10 +85,10 @@ let PDFParser = (function () {
 	};
 
 	// constructor
-    function PdfParser(context, needRawText) {
+    function PdfParser(context, needRawText, imageExtractDir) {
 		//call constructor for super class
 	    stream.Transform.call(this, {objectMode: true, bufferSize: 64 * 1024});
-	
+
         // private
         let _id = _nextId++;
 
@@ -101,7 +101,7 @@ let PDFParser = (function () {
 
         this.pdfFilePath = null; //current PDF file to load and parse, null means loading/parsing not started
         this.data = null; //if file read success, data is PDF content; if failed, data is "err" object
-        this.PDFJS = new PDFJS(needRawText);
+        this.PDFJS = new PDFJS(needRawText, imageExtractDir);
         this.processFieldInfoXML = false;//disable additional _fieldInfo.xml parsing and merging
 
 	    this.chunks = [];
